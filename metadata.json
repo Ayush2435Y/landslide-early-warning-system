@@ -1,0 +1,6 @@
+{
+  "name": "Lithos Monitor GIS",
+  "description": "Landslide Early Warning System: AI-Based Monitoring for North-Eastern Region of India featuring multi-sensor data fusion, real-time rainfall & pore-pressure telemetry, automated alerts, and GIS risk mapping.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
