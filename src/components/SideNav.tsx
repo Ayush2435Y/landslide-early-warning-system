@@ -44,30 +44,67 @@ export const SideNav: React.FC<SideNavProps> = ({
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Mobile Drawer Backdrop & Menu */}
       {isOpenMobile && (
-        <div 
-          onClick={onCloseMobile}
-          className="fixed inset-0 bg-black/60 z-30 lg:hidden backdrop-blur-xs" 
-        />
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div 
+            onClick={onCloseMobile}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs" 
+          />
+          <aside className="relative z-50 w-64 max-w-[80vw] h-full bg-[#080e22] border-r border-slate-800 text-slate-300 flex flex-col justify-between select-none shadow-2xl animate-in slide-in-from-left duration-200">
+            {/* Top Navigation Menu List */}
+            <nav className="p-3.5 space-y-1 overflow-y-auto flex-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      onSelectTab(item.id);
+                      onCloseMobile?.();
+                    }}
+                    className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-[#00b894] text-white font-semibold shadow-md shadow-emerald-950/40'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Mobile Bottom Status */}
+            <div className="p-3.5 border-t border-slate-800/80 bg-[#070c1d]">
+              <div className="bg-[#0f1a38] border border-slate-700/60 rounded-xl p-3 flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-xs font-bold text-white">System Health</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-300">
+                  <span>Operational</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
       )}
 
-      <aside className={`
-        fixed top-16 left-0 bottom-12 w-60 bg-[#080e22] border-r border-slate-800/90 text-slate-300 z-40 flex flex-col justify-between select-none transition-transform duration-200 ease-in-out
-        ${isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+      {/* Desktop Persistent Sidebar (In-flow Flex Column) */}
+      <aside className="hidden lg:flex w-60 shrink-0 h-full bg-[#080e22] border-r border-slate-800/90 text-slate-300 flex-col justify-between select-none">
         {/* Top Navigation Menu List */}
-        <nav className="p-3.5 space-y-1 overflow-y-auto flex-1 custom-scrollbar">
+        <nav className="p-3.5 space-y-1 overflow-y-auto flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => {
-                  onSelectTab(item.id);
-                  onCloseMobile?.();
-                }}
+                onClick={() => onSelectTab(item.id)}
                 className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-[#00b894] hover:bg-[#00a383] text-white font-semibold shadow-md shadow-emerald-950/40'

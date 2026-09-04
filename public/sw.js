@@ -1,13 +1,10 @@
-const CACHE_NAME = 'lithos-geotech-v1';
-const API_CACHE_NAME = 'lithos-telemetry-api-v1';
+const CACHE_NAME = 'lithos-geotech-v2';
+const API_CACHE_NAME = 'lithos-telemetry-api-v2';
 
 // Static assets and shell to cache on install
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
-  '/src/main.tsx',
-  '/src/App.tsx',
-  '/src/index.css',
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,6 +34,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Skip caching Vite HMR and dynamic development modules
+  if (
+    url.pathname.startsWith('/@vite') ||
+    url.pathname.startsWith('/@fs') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.includes('node_modules')
+  ) {
+    return;
+  }
 
   // 1. Telemetry API Endpoints: Network-first with cache fallback
   if (url.pathname.startsWith('/api/telemetry/') || url.pathname.startsWith('/api/sensors/')) {

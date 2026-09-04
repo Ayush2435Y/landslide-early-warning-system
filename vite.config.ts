@@ -10,21 +10,16 @@ export default defineConfig(() => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+      dedupe: ['react', 'react-dom'],
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
     },
     build: {
       outDir: 'dist',
       emptyOutDir: true,
       sourcemap: true,
-      chunkSizeWarningLimit: 2500,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom'],
-            motion: ['motion'],
-            lucide: ['lucide-react'],
-          },
-        },
-      },
+      chunkSizeWarningLimit: 3000,
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',

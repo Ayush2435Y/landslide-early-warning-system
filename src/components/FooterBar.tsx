@@ -3,7 +3,7 @@ import { Clock, Brain, Radio, Bell } from 'lucide-react';
 
 export const FooterBar: React.FC = () => {
   return (
-    <footer className="fixed bottom-0 left-0 right-0 h-12 bg-[#080e22] border-t border-slate-800 text-slate-400 text-xs px-4 md:px-6 flex items-center justify-between z-40 select-none">
+    <footer className="w-full h-12 shrink-0 bg-[#080e22] border-t border-slate-800 text-slate-400 text-xs px-4 md:px-6 flex items-center justify-between z-30 select-none">
       <div className="flex items-center gap-2">
         <span>© 2024 Landslide Early Warning System</span>
       </div>

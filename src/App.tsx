@@ -268,7 +268,7 @@ export function App() {
   const criticalAlertsCount = alerts.filter((a) => a.severity === 'critical' && !a.acknowledged).length;
 
   return (
-    <div className="min-h-screen bg-[#edf2f7] text-slate-900 flex flex-col font-sans selection:bg-emerald-200">
+    <div className="h-screen w-full max-w-full bg-[#edf2f7] text-slate-900 flex flex-col font-sans overflow-hidden selection:bg-emerald-200">
       {/* Top Navbar */}
       <TopNavbar
         currentTab={currentTab}
@@ -297,7 +297,7 @@ export function App() {
 
       {/* Offline Banner */}
       {!effectiveOnline && (
-        <div className="fixed top-16 left-0 right-0 z-40 bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md border-b border-amber-600">
+        <div className="shrink-0 bg-amber-500 text-amber-950 px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md border-b border-amber-600 z-30">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-950 animate-ping shrink-0" />
             <WifiOff className="w-4 h-4 shrink-0 text-amber-950" />
@@ -308,7 +308,7 @@ export function App() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => forceSaveCache(sensors, reports)}
-              className="px-2.5 py-1 bg-amber-900 hover:bg-black text-white rounded text-[11px] font-mono transition-colors flex items-center gap-1"
+              className="px-2.5 py-1 bg-amber-900 hover:bg-black text-white rounded text-[11px] font-mono transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Database className="w-3 h-3" />
               <span>Snapshot State</span>
@@ -317,9 +317,9 @@ export function App() {
         </div>
       )}
 
-      {/* Main Layout Body */}
-      <div className={`flex ${!effectiveOnline ? 'pt-24' : 'pt-16'} pb-12 h-screen overflow-hidden`}>
-        {/* Left SideNav matching mockup */}
+      {/* Main Layout Body (Sidebar + Content Area) */}
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+        {/* Left SideNav */}
         <SideNav
           currentTab={currentTab}
           onSelectTab={(tab) => {
@@ -333,8 +333,8 @@ export function App() {
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
-        {/* Content Area (offset by sidebar width on large screens) */}
-        <main className="flex-1 flex flex-col overflow-hidden lg:pl-60">
+        {/* Content Area */}
+        <main className={`flex-1 flex flex-col min-w-0 min-h-0 ${currentTab === 'map' ? 'overflow-hidden' : 'overflow-y-auto'} bg-[#edf2f7]`}>
           {currentTab === 'dashboard' && (
             <DashboardView
               sensors={sensors}
@@ -355,6 +355,7 @@ export function App() {
               onNavigateToTelemetry={() => setCurrentTab('telemetry')}
               onExportReport={handleExportData}
               onViewAllAlerts={() => setCurrentTab('alerts')}
+              onNavigateToMap={() => setCurrentTab('map')}
             />
           )}
 

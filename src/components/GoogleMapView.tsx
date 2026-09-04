@@ -1,3 +1,4 @@
+// Source: Google Maps Platform Code Assist
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   APIProvider, 
@@ -6,6 +7,9 @@ import {
   InfoWindow, 
   useMap 
 } from '@vis.gl/react-google-maps';
+import { RealGoogleMap } from './RealGoogleMap';
+
+const GOOGLE_MAPS_LIBRARIES: ('marker' | 'places')[] = ['marker', 'places'];
 import { 
   Radio, 
   Activity, 
@@ -598,7 +602,9 @@ export const GoogleMapView: React.FC<GoogleMapViewProps> = ({
     return (
       <APIProvider 
         apiKey={apiKey} 
-        libraries={['marker', 'places']}
+        libraries={GOOGLE_MAPS_LIBRARIES}
+        region="IN"
+        language="en"
         onError={(err) => {
           console.warn('[GoogleMapView] APIProvider error encountered:', err);
           setMapsAuthFailed(true);
@@ -895,7 +901,23 @@ export const GoogleMapView: React.FC<GoogleMapViewProps> = ({
 
       {/* Main Map Rendering Area */}
       <div className="flex-1 relative w-full h-full overflow-hidden">
-        {apiKey ? renderGoogleMapsSDK() : renderFallbackHierarchicalMap()}
+        {apiKey ? (
+          renderGoogleMapsSDK()
+        ) : (
+          <RealGoogleMap
+            center={[mapCoordinates.center.lat, mapCoordinates.center.lng]}
+            zoom={mapCoordinates.zoom}
+            stations={visiblePins}
+            mapType={mapType}
+            showHazardBuffers={showHazardBuffers}
+            selectedStationId={selectedPin?.pinId || null}
+            onSelectStation={(pin) => {
+              setSelectedPin(pin);
+              if (onSelectSensor) onSelectSensor(pin as any);
+            }}
+            className="w-full h-full"
+          />
+        )}
       </div>
     </div>
   );

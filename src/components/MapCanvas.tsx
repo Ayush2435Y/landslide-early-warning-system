@@ -50,6 +50,7 @@ import {
   HierarchicalSensorPin 
 } from '../data/hierarchicalData';
 import { NERScannedMapLayer } from './NERScannedMapLayer';
+import { GoogleMapView } from './GoogleMapView';
 
 export type MapHierarchyLevel = 'regional' | 'state' | 'district';
 
@@ -215,7 +216,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [mapStyle, setMapStyle] = useState<'scanned' | 'tactical' | 'satellite' | 'heatmap'>('scanned');
+  const [mapStyle, setMapStyle] = useState<'google' | 'scanned' | 'tactical' | 'satellite' | 'heatmap'>('google');
   const [clusteringEnabled, setClusteringEnabled] = useState(true);
   
   // Scanned Map Layer Sub-Toggles
@@ -479,8 +480,9 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   return (
     <div className="relative w-full h-full overflow-hidden select-none bg-[#0e1626] text-stone-900 font-sans">
       
-      {/* ================= TOP HIERARCHICAL BREADCRUMB & DENSITY BAR ================= */}
-      <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-stone-300 shadow-md">
+      {/* ================= TOP HIERARCHICAL BREADCRUMB & DENSITY BAR (NON-GOOGLE MODES) ================= */}
+      {mapStyle !== 'google' && (
+        <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-xl border border-stone-300 shadow-md">
         
         {/* Official Breadcrumb Trail */}
         <div className="flex items-center gap-1 text-xs font-mono">
@@ -625,22 +627,34 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           </div>
         </div>
       </div>
+      )}
 
-      {/* ================= MAP CANVAS CONTAINER (SCALABLE & PANNABLE) ================= */}
-      <div 
-        className={`absolute inset-0 transition-all duration-500 ease-out ${
-          mapStyle === 'satellite' 
-            ? 'bg-cover bg-center' 
-            : mapStyle === 'scanned' 
-            ? 'bg-[#e8e2cf]' 
-            : 'map-grid-bg'
-        }`}
-        style={{
-          transform: `scale(${zoomLevel}) translate(${panOffset.x}%, ${panOffset.y}%)`,
-          backgroundImage: mapStyle === 'satellite' ? `url(${HOTLINKED_IMAGES.mapAerialBg})` : undefined,
-          transformOrigin: 'center center',
-        }}
-      >
+      {/* ================= MAP CANVAS CONTAINER (SCALABLE & PANNABLE OR GOOGLE MAPS) ================= */}
+      {mapStyle === 'google' ? (
+        <div className="absolute inset-0 z-0">
+          <GoogleMapView
+            sensors={sensors}
+            reports={reports}
+            selectedSensor={selectedSensor}
+            onSelectSensor={onSelectSensor}
+            isAdmin={isAdmin}
+          />
+        </div>
+      ) : (
+        <div 
+          className={`absolute inset-0 transition-all duration-500 ease-out ${
+            mapStyle === 'satellite' 
+              ? 'bg-cover bg-center' 
+              : mapStyle === 'scanned' 
+              ? 'bg-[#e8e2cf]' 
+              : 'map-grid-bg'
+          }`}
+          style={{
+            transform: `scale(${zoomLevel}) translate(${panOffset.x}%, ${panOffset.y}%)`,
+            backgroundImage: mapStyle === 'satellite' ? `url(${HOTLINKED_IMAGES.mapAerialBg})` : undefined,
+            transformOrigin: 'center center',
+          }}
+        >
 
         {/* ================= AUTHENTIC NER SCANNED MAP LAYER (GSI / SOI TOPO SCAN) ================= */}
         {mapStyle === 'scanned' && (
@@ -1078,9 +1092,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         </div>
 
       </div>
-
+      )}
 
       {/* ================= FLOATING MAP CONTROLS (BOTTOM LEFT) ================= */}
+      {mapStyle !== 'google' && (
       <div className="absolute bottom-6 left-6 z-30 flex flex-col gap-2 bg-white/95 backdrop-blur-xs p-1 rounded-xl border border-stone-300 shadow-md">
         <button 
           onClick={handleZoomIn}
@@ -1106,10 +1121,13 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           <Crosshair className="w-4 h-4" />
         </button>
       </div>
+      )}
 
 
       {/* ================= FLOATING MAP STYLE & CLUSTERING CONTROLS (TOP RIGHT) ================= */}
-      <div className="absolute top-16 right-4 z-30 flex items-center gap-1.5">
+      {mapStyle !== 'google' ? (
+        <>
+          <div className="absolute top-16 right-4 z-30 flex items-center gap-1.5">
         {clusteringEnabled && activeClusterCount > 0 && hierarchyLevel === 'district' && (
           <div className="bg-blue-950/90 text-blue-100 text-[11px] font-mono px-2.5 py-1.5 rounded-lg border border-blue-400/40 shadow-md flex items-center gap-2 backdrop-blur-xs">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
@@ -1130,6 +1148,15 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
 
           <div className="w-px h-4 bg-stone-200 mx-0.5" />
 
+          <button
+            onClick={() => setMapStyle('google')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors flex items-center gap-1.5 ${
+              mapStyle === 'google' ? 'bg-[#0f2347] text-cyan-300 shadow-xs ring-1 ring-cyan-500 font-bold' : 'text-stone-600 hover:bg-stone-100'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Google Maps</span>
+          </button>
           <button
             onClick={() => setMapStyle('scanned')}
             className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors flex items-center gap-1 ${
@@ -1681,6 +1708,27 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           <span>L3: Critical</span>
         </div>
       </div>
+      </>
+      ) : (
+        /* Sleek Floating Mode Switcher when in Google Maps mode */
+        <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-[#0a1128]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-2xl text-xs text-white">
+          <button
+            onClick={() => setMapStyle('google')}
+            className="px-2.5 py-1 rounded-lg font-bold bg-cyan-600 text-white shadow-xs flex items-center gap-1.5"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Google Maps</span>
+          </button>
+          <button
+            onClick={() => setMapStyle('scanned')}
+            className="px-2.5 py-1 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+            title="Switch to Geological Survey Topographic Scan Layer"
+          >
+            <Compass className="w-3.5 h-3.5 text-amber-400" />
+            <span>NER Topo Scan</span>
+          </button>
+        </div>
+      )}
 
 
       {/* ================= INSPECTOR DRAWER ================= */}
