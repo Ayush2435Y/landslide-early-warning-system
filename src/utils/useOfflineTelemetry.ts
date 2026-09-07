@@ -49,6 +49,16 @@ export function useOfflineTelemetry(
   const effectiveOnline = isOnline && !isSimulatedOffline;
   const initialLoadDone = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onSensorsLoadedRef = useRef(onSensorsLoadedFromCache);
+  const onReportsLoadedRef = useRef(onReportsLoadedFromCache);
+
+  useEffect(() => {
+    onSensorsLoadedRef.current = onSensorsLoadedFromCache;
+  }, [onSensorsLoadedFromCache]);
+
+  useEffect(() => {
+    onReportsLoadedRef.current = onReportsLoadedFromCache;
+  }, [onReportsLoadedFromCache]);
 
   // Refresh IndexedDB statistics
   const refreshStats = useCallback(async () => {
@@ -69,13 +79,13 @@ export function useOfflineTelemetry(
         const cachedSensors = await loadSensorsFromIndexedDB();
         if (cachedSensors && cachedSensors.length > 0) {
           setIsServingFromCache(true);
-          if (onSensorsLoadedFromCache) {
-            onSensorsLoadedFromCache(cachedSensors);
+          if (onSensorsLoadedRef.current) {
+            onSensorsLoadedRef.current(cachedSensors);
           }
         }
         const cachedReports = await loadReportsFromIndexedDB();
-        if (cachedReports && cachedReports.length > 0 && onReportsLoadedFromCache) {
-          onReportsLoadedFromCache(cachedReports);
+        if (cachedReports && cachedReports.length > 0 && onReportsLoadedRef.current) {
+          onReportsLoadedRef.current(cachedReports);
         }
       } else {
         // Initial cache save of baseline data if cache is empty
@@ -106,8 +116,8 @@ export function useOfflineTelemetry(
       setIsServingFromCache(true);
       // Attempt to load latest cache
       const cached = await loadSensorsFromIndexedDB();
-      if (cached && cached.length > 0 && onSensorsLoadedFromCache) {
-        onSensorsLoadedFromCache(cached);
+      if (cached && cached.length > 0 && onSensorsLoadedRef.current) {
+        onSensorsLoadedRef.current(cached);
       }
       await refreshStats();
     };
@@ -119,7 +129,7 @@ export function useOfflineTelemetry(
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [onSensorsLoadedFromCache]);
+  }, [refreshStats]);
 
   // 3. Auto-cache live telemetry to IndexedDB when online (debounced)
   useEffect(() => {

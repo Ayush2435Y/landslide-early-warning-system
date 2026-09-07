@@ -3,18 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lithos Monitor GIS - Landslide Early Warning System (NER India)</title>
-    <meta name="description" content="Landslide Early Warning System: AI-Based Monitoring for North-Eastern Region of India featuring multi-sensor data fusion, real-time rainfall & pore-pressure telemetry, automated alerts, and GIS risk mapping." />
+    <title>Bhumi Rakshak - Landslide Early Warning System (NER India)</title>
+    <meta name="description" content="Bhumi Rakshak - Landslide Early Warning System: AI-Based Monitoring for North-Eastern Region of India featuring multi-sensor data fusion, real-time rainfall & pore-pressure telemetry, automated alerts, and GIS risk mapping." />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
-    <meta property="og:title" content="Lithos Monitor GIS - Landslide Early Warning System (NER India)" />
-    <meta property="og:description" content="Landslide Early Warning System: AI-Based Monitoring for North-Eastern Region of India featuring multi-sensor data fusion, real-time rainfall & pore-pressure telemetry, automated alerts, and GIS risk mapping." />
+    <meta property="og:title" content="Bhumi Rakshak - Landslide Early Warning System (NER India)" />
+    <meta property="og:description" content="Bhumi Rakshak - Landslide Early Warning System: AI-Based Monitoring for North-Eastern Region of India featuring multi-sensor data fusion, real-time rainfall & pore-pressure telemetry, automated alerts, and GIS risk mapping." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-[#060b18] text-white m-0 p-0">
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #060b18; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 20px; box-sizing: border-box;">
+        <div style="position: relative; width: 64px; height: 64px; margin-bottom: 24px;">
+          <div style="position: absolute; inset: 0; border: 3px solid rgba(8, 145, 178, 0.2); border-top-color: #06b6d4; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <div style="position: absolute; inset: 8px; border: 2px dashed rgba(56, 189, 248, 0.4); border-bottom-color: #38bdf8; border-radius: 50%; animation: spin 2s linear infinite reverse;"></div>
+        </div>
+        <div style="font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: #38bdf8; font-weight: 700; margin-bottom: 8px; font-family: monospace;">
+          LANDSLIDE EARLY WARNING SYSTEM &bull; NER INDIA
+        </div>
+        <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff; margin-bottom: 6px;">
+          BHUMI RAKSHAK <span style="font-size: 16px; color: #4ade80; font-weight: 600;">(भूमि रक्षक)</span>
+        </div>
+        <div style="font-size: 13px; color: #94a3b8; max-width: 380px;">
+          Initializing Landslide Early Warning Telemetry Grid...
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -79,6 +79,11 @@ export const RealGoogleMap: React.FC<RealGoogleMapProps> = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const buffersLayerRef = useRef<L.LayerGroup | null>(null);
+  const onSelectStationRef = useRef(onSelectStation);
+
+  useEffect(() => {
+    onSelectStationRef.current = onSelectStation;
+  }, [onSelectStation]);
 
   const [activeMapType, setActiveMapType] = useState<GoogleMapLayerType>(initialMapType);
   const [activeHazardBuffers, setActiveHazardBuffers] = useState<boolean>(showHazardBuffers);
@@ -318,8 +323,8 @@ export const RealGoogleMap: React.FC<RealGoogleMapProps> = ({
       });
 
       marker.on('click', () => {
-        if (onSelectStation) {
-          onSelectStation(st);
+        if (onSelectStationRef.current) {
+          onSelectStationRef.current(st);
         }
       });
 

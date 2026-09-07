@@ -24,15 +24,21 @@ export interface OfflineStorageStats {
   isAvailable: boolean;
 }
 
+let cachedDbPromise: Promise<IDBDatabase> | null = null;
+
 /**
- * Open or create the IndexedDB instance for telemetry caching
+ * Open or retrieve the cached IndexedDB instance for telemetry caching
  */
 function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined' || !window.indexedDB) {
-      return reject(new Error('IndexedDB is not supported in this browser/environment.'));
-    }
+  if (typeof window === 'undefined' || !window.indexedDB) {
+    return Promise.reject(new Error('IndexedDB is not supported in this browser/environment.'));
+  }
 
+  if (cachedDbPromise) {
+    return cachedDbPromise;
+  }
+
+  cachedDbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (event) => {
@@ -61,13 +67,24 @@ function openDB(): Promise<IDBDatabase> {
     };
 
     request.onsuccess = (event) => {
-      resolve((event.target as IDBOpenDBRequest).result);
+      const db = (event.target as IDBOpenDBRequest).result;
+      db.onclose = () => {
+        cachedDbPromise = null;
+      };
+      db.onversionchange = () => {
+        db.close();
+        cachedDbPromise = null;
+      };
+      resolve(db);
     };
 
     request.onerror = (event) => {
+      cachedDbPromise = null;
       reject((event.target as IDBOpenDBRequest).error);
     };
   });
+
+  return cachedDbPromise;
 }
 
 /**

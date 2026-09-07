@@ -383,3 +383,61 @@ export interface HistoricalLandslideEvent {
   mitigationInstalled?: string;
 }
 
+export interface AuthenticatedUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'admin' | 'super_admin' | 'user' | 'citizen' | 'field_officer';
+  department?: string;
+  token?: string;
+  loginTime: string;
+  avatarUrl?: string;
+  isConfidentialCleared: boolean;
+  isAuthenticated: boolean;
+}
+
+export interface UserLoginRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'citizen' | 'user' | 'field_officer' | 'admin';
+  loginTimestamp: string;
+  loginTimeFormatted: string;
+  ipAddress: string;
+  deviceInfo: string;
+  location: string;
+  status: 'active' | 'logged_out' | 'idle';
+  otpVerified: boolean;
+  sessionId: string;
+}
+
+export interface AdminAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: 'super_admin' | 'sector_admin';
+  department: string;
+  jurisdiction: string;
+  createdAt: string;
+  lastLogin?: string;
+  status: 'active' | 'suspended';
+  isRootAdmin?: boolean;
+}
+
+export interface ConfidentialDataItem {
+  id: string;
+  title: string;
+  classification: 'TOP_SECRET_GEOTECH' | 'RESTRICTED_DEFENSE_CORRIDOR' | 'INTERNAL_GSI_ONLY';
+  category: 'Military Border Road' | 'Deep Subterranean Borehole' | 'Critical Hydropower Dam' | 'Seismic Fault Core';
+  sector: string;
+  state: string;
+  description: string;
+  coordinatesMasked: string;
+  coordinatesActual: string;
+  sensitiveMetric: string;
+  lastAuditedBy: string;
+  retentionPolicy: string;
+}
+

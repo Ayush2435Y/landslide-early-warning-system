@@ -35,6 +35,7 @@ interface SettingsModalProps {
   onToggleSimulatedOffline?: () => void;
   onForceCache?: () => void;
   onClearCache?: () => void;
+  onRebootDiagnostics?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -49,6 +50,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleSimulatedOffline,
   onForceCache,
   onClearCache,
+  onRebootDiagnostics,
 }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'gis' | 'telemetry' | 'alerts' | 'storage'>('general');
   const [cacheActionMsg, setCacheActionMsg] = useState<string | null>(null);
@@ -351,6 +353,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     ))}
                   </div>
                 </div>
+
+                {onRebootDiagnostics && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#45464d] mb-2">
+                      System Initialization & Boot Screen
+                    </label>
+                    <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div>
+                        <div className="text-sm font-bold text-slate-800">Launch System Boot Loading Page</div>
+                        <div className="text-xs text-slate-500">Preview the startup telemetry diagnostics sequence</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onRebootDiagnostics();
+                        }}
+                        className="px-3 py-1.5 bg-[#0a1128] hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Run Diagnostics</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -596,7 +622,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 <p className="text-[11px] text-gray-500">
-                  When disconnected from network or cell towers, Lithos GIS automatically switches to offline mode and renders this last-known cached telemetry state on all GIS maps, sensor feeds, and analytical graphs.
+                  When disconnected from network or cell towers, Bhumi Rakshak GIS automatically switches to offline mode and renders this last-known cached telemetry state on all GIS maps, sensor feeds, and analytical graphs.
                 </p>
               </div>
             )}

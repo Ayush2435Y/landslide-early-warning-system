@@ -62,7 +62,7 @@ export const OfficerProfileView: React.FC<OfficerProfileViewProps> = ({
                 ID: {profile.officerId} &bull; {profile.unit} &bull; {profile.sector}
               </p>
               <p className="text-xs text-[#76777d] mt-0.5">
-                Lithos Mobile Unit &bull; Hardware Firmware v3.12-secure
+                Bhumi Rakshak Mobile Unit &bull; Hardware Firmware v3.12-secure
               </p>
             </div>
           </div>

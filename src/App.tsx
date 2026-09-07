@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { TopNavbar } from './components/TopNavbar';
 import { SideNav } from './components/SideNav';
 import { FooterBar } from './components/FooterBar';
@@ -17,6 +17,10 @@ import { CitizenGuideModal } from './components/CitizenGuideModal';
 import { SettingsModal } from './components/SettingsModal';
 import { MapCanvas } from './components/MapCanvas';
 import { EdgeHardwareFusionConsole } from './components/EdgeHardwareFusionConsole';
+import { LoadingScreen } from './components/LoadingScreen';
+import { AuthModal } from './components/AuthModal';
+import { AdminUsersView } from './components/AdminUsersView';
+import { UserLoginView } from './components/UserLoginView';
 import { useOfflineTelemetry } from './utils/useOfflineTelemetry';
 import { Database, WifiOff, RefreshCw } from 'lucide-react';
 
@@ -27,7 +31,7 @@ import {
   INITIAL_PREDICTIVE_INSIGHT,
   INITIAL_OFFICER_PROFILE,
 } from './data/initialData';
-import { AlertItem, IncidentReport, PredictiveAIInsight, SensorData, FieldOfficerProfile } from './types';
+import { AlertItem, IncidentReport, PredictiveAIInsight, SensorData, FieldOfficerProfile, AuthenticatedUser } from './types';
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
@@ -35,6 +39,39 @@ export function App() {
   const [isAdmin, setIsAdmin] = useState<boolean>(true);
   const [activeLayer, setActiveLayer] = useState<string>('risk_zones');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+
+  // Authenticated User State (Loaded from localStorage or initialized with Super Admin)
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('lithos_auth_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          isAuthenticated: parsed.isAuthenticated ?? true,
+          loginTime: parsed.loginTime || new Date().toISOString(),
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved auth user:', e);
+    }
+    return {
+      id: 'admin-super-01',
+      name: 'Dr. A. Sharma (Director)',
+      email: 'admin@gsi.gov.in',
+      phone: '+91 361 223 4567',
+      role: 'super_admin',
+      department: 'Geological Survey of India (NER Directorate)',
+      jurisdiction: 'NER Directorate & Border Monitoring',
+      isConfidentialCleared: true,
+      token: 'admin_sess_default',
+      loginTime: new Date().toISOString(),
+      isAuthenticated: true,
+    };
+  });
+
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState<'user' | 'admin'>('user');
 
   // Application Data States
   const [sensors, setSensors] = useState<SensorData[]>(INITIAL_SENSORS);
@@ -50,18 +87,40 @@ export function App() {
   const [isNewIncidentModalOpen, setIsNewIncidentModalOpen] = useState(false);
   const [isCitizenGuideOpen, setIsCitizenGuideOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isAppLoading, setIsAppLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [spikeActive, setSpikeActive] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Show Toast notification helper
-  const showToast = (msg: string) => {
+  // Show Toast notification helper with cleanup to prevent memory leaks and stale overwrites
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage((current) => (current === msg ? null : current));
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
     }, 4000);
-  };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleSensorsLoadedFromCache = useCallback((cachedSensors: SensorData[]) => {
+    setSensors(cachedSensors);
+    showToast(`Loaded ${cachedSensors.length} cached sensors from IndexedDB (Offline mode)`);
+  }, [showToast]);
+
+  const handleReportsLoadedFromCache = useCallback((cachedReports: IncidentReport[]) => {
+    setReports(cachedReports);
+  }, []);
 
   // Offline Telemetry & IndexedDB storage hook
   const {
@@ -77,13 +136,8 @@ export function App() {
   } = useOfflineTelemetry(
     sensors,
     reports,
-    (cachedSensors) => {
-      setSensors(cachedSensors);
-      showToast(`Loaded ${cachedSensors.length} cached sensors from IndexedDB (Offline mode)`);
-    },
-    (cachedReports) => {
-      setReports(cachedReports);
-    }
+    handleSensorsLoadedFromCache,
+    handleReportsLoadedFromCache
   );
 
   // Real-time sensor stream simulation
@@ -94,10 +148,10 @@ export function App() {
       setSensors((prevSensors) =>
         prevSensors.map((sensor) => {
           let delta = (Math.random() - 0.48) * 0.3;
-          if (spikeActive && sensor.id === 'PZ-109') {
+          if (spikeActive && (sensor.id.includes('PZ') || sensor.id.includes('NODE') || sensor.id === 'PZ-109')) {
             delta += 0.8;
           }
-          if (spikeActive && sensor.id === 'INC-44') {
+          if (spikeActive && (sensor.id.includes('INC') || sensor.id === 'INC-44')) {
             delta += 0.05;
           }
           const newValue = Math.max(0, +(sensor.value + delta).toFixed(1));
@@ -107,9 +161,16 @@ export function App() {
           const soilDelta = (Math.random() - 0.48) * 0.2;
           const newSoilMoisture = Math.min(99, Math.max(15, +(baseSoil + soilDelta).toFixed(1)));
           
+          const updatedPorePressure = sensor.type === 'piezometer' ? newValue : (sensor.porePressure ? +(sensor.porePressure + delta * 0.5).toFixed(1) : undefined);
+          const updatedDisplacement = sensor.type === 'inclinometer' ? newValue : (sensor.displacement ? +(sensor.displacement + (delta > 0 ? delta * 0.1 : 0)).toFixed(1) : undefined);
+          const updatedRainfallRate = sensor.type === 'rain_gauge' ? newValue : sensor.rainfallRate;
+
           return {
             ...sensor,
             value: newValue,
+            porePressure: updatedPorePressure,
+            displacement: updatedDisplacement,
+            rainfallRate: updatedRainfallRate,
             soilMoisture: newSoilMoisture,
             sparkline: newSparkline,
             lastUpdated: 'Just now',
@@ -181,18 +242,21 @@ export function App() {
 
   // Dispatch Team Action
   const handleDispatchTeam = (reportId: string) => {
+    let targetLocation = 'site';
     setReports((prev) =>
-      prev.map((r) =>
-        r.id === reportId
-          ? {
-              ...r,
-              status: 'dispatched',
-              notes: [...(r.notes || []), `Rapid Geotech Team 4 dispatched at ${new Date().toLocaleTimeString()}`],
-            }
-          : r
-      )
+      prev.map((r) => {
+        if (r.id === reportId) {
+          targetLocation = r.locationName;
+          return {
+            ...r,
+            status: 'dispatched',
+            notes: [...(r.notes || []), `Rapid Geotech Team 4 dispatched at ${new Date().toLocaleTimeString()}`],
+          };
+        }
+        return r;
+      })
     );
-    showToast(`Emergency Geotechnical Unit dispatched to ${selectedReport.locationName}.`);
+    showToast(`Emergency Geotechnical Unit dispatched to ${targetLocation}.`);
   };
 
   // Dismiss Report
@@ -220,7 +284,7 @@ export function App() {
         ...prev,
         lastSyncTime: `${new Date().toLocaleTimeString()} UTC`,
       }));
-      showToast('Lithos Field Unit fully synchronized with HQ Command Server.');
+      showToast('Bhumi Rakshak Field Unit fully synchronized with HQ Command Server.');
     }, 1200);
   };
 
@@ -267,6 +331,32 @@ export function App() {
 
   const criticalAlertsCount = alerts.filter((a) => a.severity === 'critical' && !a.acknowledged).length;
 
+  const handleLoginSuccess = useCallback((user: AuthenticatedUser) => {
+    const verifiedUserSession: AuthenticatedUser = {
+      ...user,
+      loginTime: user.loginTime || new Date().toISOString(),
+      isAuthenticated: true,
+    };
+    setCurrentUser(verifiedUserSession);
+    const userIsAdmin = verifiedUserSession.role === 'admin' || verifiedUserSession.role === 'super_admin';
+    setIsAdmin(userIsAdmin);
+    try {
+      localStorage.setItem('lithos_auth_user', JSON.stringify(verifiedUserSession));
+    } catch (e) {
+      console.warn('Could not save user to localStorage:', e);
+    }
+    showToast(`Authenticated as ${verifiedUserSession.name} (${verifiedUserSession.role === 'citizen' ? 'Citizen OTP Verified' : 'Administrator'})`);
+  }, [showToast]);
+
+  const handleLogout = useCallback(() => {
+    setCurrentUser(null);
+    setIsAdmin(false);
+    try {
+      localStorage.removeItem('lithos_auth_user');
+    } catch (e) {}
+    showToast('Signed out. Switched to Public Guest access.');
+  }, [showToast]);
+
   return (
     <div className="h-screen w-full max-w-full bg-[#edf2f7] text-slate-900 flex flex-col font-sans overflow-hidden selection:bg-emerald-200">
       {/* Top Navbar */}
@@ -281,7 +371,7 @@ export function App() {
           setIsOfficerMode(false);
           setCurrentTab('users');
         }}
-        criticalAlertCount={3}
+        criticalAlertCount={criticalAlertsCount}
         isOfficerMode={isOfficerMode}
         onToggleOfficerMode={() => setIsOfficerMode(!isOfficerMode)}
         isAdmin={isAdmin}
@@ -289,10 +379,17 @@ export function App() {
         onOpenCitizenGuide={() => setIsCitizenGuideOpen(true)}
         onOpenNewIncident={() => setIsNewIncidentModalOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onRebootDiagnostics={() => setIsAppLoading(true)}
         isOnline={isOnline}
         isSimulatedOffline={isSimulatedOffline}
         onToggleSimulatedOffline={toggleSimulatedOffline}
         onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        currentUser={currentUser}
+        onOpenAuthModal={(mode) => {
+          setAuthInitialMode(mode || 'user');
+          setIsAuthModalOpen(true);
+        }}
+        onLogout={handleLogout}
       />
 
       {/* Offline Banner */}
@@ -362,6 +459,8 @@ export function App() {
           {currentTab === 'telemetry' && (
             <RealTimeAnalyticsView
               sensors={sensors}
+              onNavigateToMap={() => setCurrentTab('map')}
+              onNavigateToAlerts={() => setCurrentTab('alerts')}
               onSelectSensor={(sensor) => {
                 setSelectedSensor(sensor);
                 setCurrentTab('sensors');
@@ -444,15 +543,25 @@ export function App() {
             <HistoryView />
           )}
 
-          {currentTab === 'users' && (
-            <OfficerProfileView
-              profile={officerProfile}
-              onForceSync={handleForceSync}
-              isSyncing={isSyncing}
-              onTogglePolling={() => {
-                setOfficerProfile((p) => ({ ...p, aggressivePolling: !p.aggressivePolling }));
-                showToast(`Sensor polling rate adjusted.`);
+          {currentTab === 'user_login' && (
+            <UserLoginView
+              currentUser={currentUser}
+              onLoginSuccess={handleLoginSuccess}
+              onLogout={handleLogout}
+              onNavigateToTab={(tab) => setCurrentTab(tab)}
+              onShowToast={showToast}
+            />
+          )}
+
+          {(currentTab === 'users' || currentTab === 'admin_portal') && (
+            <AdminUsersView
+              currentUser={currentUser}
+              onLoginSuccess={handleLoginSuccess}
+              onOpenAuthModal={(mode) => {
+                setAuthInitialMode(mode || 'user');
+                setIsAuthModalOpen(true);
               }}
+              onShowToast={showToast}
             />
           )}
 
@@ -466,6 +575,13 @@ export function App() {
       <FooterBar />
 
       {/* Modals */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        initialMode={authInitialMode}
+      />
+
       <NewIncidentModal
         isOpen={isNewIncidentModalOpen}
         onClose={() => setIsNewIncidentModalOpen(false)}
@@ -498,6 +614,7 @@ export function App() {
         onToggleSimulatedOffline={toggleSimulatedOffline}
         onForceCache={() => forceSaveCache(sensors, reports)}
         onClearCache={clearCache}
+        onRebootDiagnostics={() => setIsAppLoading(true)}
         onSaveSettings={(saved) => {
           showToast(`Settings Saved: ${saved.units.toUpperCase()} units, ${saved.crs} datum, ${saved.pollingRate}s polling`);
         }}
@@ -509,6 +626,14 @@ export function App() {
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>{toastMessage}</span>
         </div>
+      )}
+
+      {/* Default System Loading / Boot Telemetry Screen */}
+      {isAppLoading && (
+        <LoadingScreen 
+          onComplete={() => setIsAppLoading(false)} 
+          minDisplayTimeMs={2200} 
+        />
       )}
     </div>
   );

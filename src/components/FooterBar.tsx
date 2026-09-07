@@ -1,11 +1,14 @@
 import React from 'react';
 import { Clock, Brain, Radio, Bell } from 'lucide-react';
+import { BhumiRakshakLogo } from './BhumiRakshakLogo';
 
 export const FooterBar: React.FC = () => {
   return (
     <footer className="w-full h-12 shrink-0 bg-[#080e22] border-t border-slate-800 text-slate-400 text-xs px-4 md:px-6 flex items-center justify-between z-30 select-none">
       <div className="flex items-center gap-2">
-        <span>© 2024 Landslide Early Warning System</span>
+        <BhumiRakshakLogo className="w-4 h-4" />
+        <span className="font-medium text-slate-300">Bhumi Rakshak (भूमि रक्षक)</span>
+        <span className="text-slate-500 hidden sm:inline">&bull; NER Landslide Early Warning System</span>
       </div>
 
       <div className="hidden md:flex items-center gap-6 lg:gap-8">

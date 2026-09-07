@@ -1,4 +1,5 @@
 import React from 'react';
+import { BhumiRakshakLogo } from './BhumiRakshakLogo';
 import { 
   LayoutDashboard, 
   Activity, 
@@ -9,7 +10,6 @@ import {
   FileText, 
   History, 
   Settings, 
-  Users, 
   Terminal,
   CheckCircle2,
   ShieldCheck
@@ -30,7 +30,8 @@ export const SideNav: React.FC<SideNavProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'telemetry', label: 'Live Monitoring', icon: Activity },
+    { id: 'admin_portal', label: 'Admin Dashboard', icon: ShieldCheck },
+    { id: 'telemetry', label: 'Live Regional Area Monitoring', icon: Activity },
     { id: 'map', label: 'Risk Map', icon: Map },
     { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
     { id: 'sensors', label: 'Sensor Data', icon: Cpu },
@@ -38,7 +39,6 @@ export const SideNav: React.FC<SideNavProps> = ({
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'history', label: 'Historical Data', icon: History },
     { id: 'configuration', label: 'Configuration', icon: Settings },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'logs', label: 'System Logs', icon: Terminal },
   ];
 
@@ -52,6 +52,20 @@ export const SideNav: React.FC<SideNavProps> = ({
             className="fixed inset-0 bg-black/60 backdrop-blur-xs" 
           />
           <aside className="relative z-50 w-64 max-w-[80vw] h-full bg-[#080e22] border-r border-slate-800 text-slate-300 flex flex-col justify-between select-none shadow-2xl animate-in slide-in-from-left duration-200">
+            {/* Mobile Drawer Brand Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <BhumiRakshakLogo 
+                showText 
+                className="w-8 h-8"
+                textClassName="text-sm font-bold text-white"
+                subtextClassName="text-[10px] text-slate-400"
+                onClick={() => {
+                  onSelectTab('dashboard');
+                  onCloseMobile?.();
+                }}
+              />
+            </div>
+
             {/* Top Navigation Menu List */}
             <nav className="p-3.5 space-y-1 overflow-y-auto flex-1">
               {navItems.map((item) => {

@@ -1,6 +1,7 @@
 // Web Audio API Synthesizer for Geotechnical Safety Alerts
 
 let audioCtx: AudioContext | null = null;
+let lastPlayTime = 0;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -11,13 +12,22 @@ function getAudioContext(): AudioContext | null {
     }
   }
   if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx.resume().catch(() => {
+      // Audio autoplay policy might defer resume until user interaction
+    });
   }
   return audioCtx;
 }
 
 export function playAlertChime(type: 'critical' | 'warning' | 'info' | 'success' = 'warning') {
   try {
+    const nowEpoch = Date.now();
+    // Throttle chimes to prevent audio distortion and overlapping nodes
+    if (nowEpoch - lastPlayTime < 500 && type !== 'critical') {
+      return;
+    }
+    lastPlayTime = nowEpoch;
+
     const ctx = getAudioContext();
     if (!ctx) return;
 

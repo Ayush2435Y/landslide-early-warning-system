@@ -299,7 +299,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   } | null>(null);
 
   const [sensorFilter, setSensorFilter] = useState<'all' | 'piezometer' | 'inclinometer' | 'moisture' | 'rain_gauge' | 'seismometer'>('all');
-  const [radarRotation, setRadarRotation] = useState(0);
 
   // Derive active State and District objects from hierarchical data
   const activeState = useMemo(() => {
@@ -310,16 +309,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     if (!activeState || !selectedDistrictId) return null;
     return activeState.monitoredDistricts.find((d) => d.id === selectedDistrictId) || null;
   }, [activeState, selectedDistrictId]);
-
-  // Animate weather radar sweep
-  useEffect(() => {
-    if (activeLayer === 'weather') {
-      const timer = setInterval(() => {
-        setRadarRotation((r) => (r + 4) % 360);
-      }, 50);
-      return () => clearInterval(timer);
-    }
-  }, [activeLayer]);
 
   // ================= HIERARCHICAL DRILL-DOWN LOGIC =================
   const handleDrillDownToState = (state: NERStateInfo) => {
@@ -1005,9 +994,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
             style={{ opacity: layerOpacities.weather / 100 }}
           >
             <div 
-              className="absolute top-[38%] left-[48%] w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400/40 pointer-events-none"
+              className="absolute top-[38%] left-[48%] w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-400/40 pointer-events-none animate-spin"
               style={{
-                background: `conic-gradient(from ${radarRotation}deg at 50% 50%, rgba(6, 182, 212, 0) 0deg, rgba(6, 182, 212, 0.28) 50deg, rgba(6, 182, 212, 0) 55deg)`
+                animationDuration: '4.5s',
+                background: 'conic-gradient(from 0deg at 50% 50%, rgba(6, 182, 212, 0) 0deg, rgba(6, 182, 212, 0.28) 50deg, rgba(6, 182, 212, 0) 55deg)'
               }}
             />
             <div 
@@ -1156,23 +1146,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           >
             <Globe className="w-3.5 h-3.5 text-cyan-400" />
             <span>Google Maps</span>
-          </button>
-          <button
-            onClick={() => setMapStyle('scanned')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors flex items-center gap-1 ${
-              mapStyle === 'scanned' ? 'bg-[#5c4a30] text-[#f7f0dc] shadow-xs' : 'text-stone-600 hover:bg-stone-100'
-            }`}
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span>NER Topo Scan</span>
-          </button>
-          <button
-            onClick={() => setMapStyle('tactical')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded transition-colors ${
-              mapStyle === 'tactical' ? 'bg-[#131b2e] text-white' : 'text-stone-600 hover:bg-stone-100'
-            }`}
-          >
-            Tactical GIS
           </button>
           <button
             onClick={() => setMapStyle('satellite')}
@@ -1710,22 +1683,14 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       </div>
       </>
       ) : (
-        /* Sleek Floating Mode Switcher when in Google Maps mode */
+        /* Sleek Floating Mode Switcher when in Google Maps mode - only Google Maps button */
         <div className="absolute bottom-6 left-6 z-30 flex items-center gap-1 bg-[#0a1128]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/80 shadow-2xl text-xs text-white">
           <button
             onClick={() => setMapStyle('google')}
-            className="px-2.5 py-1 rounded-lg font-bold bg-cyan-600 text-white shadow-xs flex items-center gap-1.5"
+            className="px-2.5 py-1 rounded-lg font-bold bg-cyan-600 text-white shadow-xs flex items-center gap-1.5 cursor-default"
           >
             <Globe className="w-3.5 h-3.5" />
             <span>Google Maps</span>
-          </button>
-          <button
-            onClick={() => setMapStyle('scanned')}
-            className="px-2.5 py-1 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5"
-            title="Switch to Geological Survey Topographic Scan Layer"
-          >
-            <Compass className="w-3.5 h-3.5 text-amber-400" />
-            <span>NER Topo Scan</span>
           </button>
         </div>
       )}
