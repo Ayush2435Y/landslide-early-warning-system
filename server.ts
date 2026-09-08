@@ -1,8 +1,8 @@
 import express, { Response } from 'express';
-import path from 'path';
+import * as path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 import { DATABASE_TABLE_REGISTRY } from './src/db/schema';
 
 dotenv.config();
@@ -1190,6 +1190,73 @@ async function startServer() {
     });
   });
 
+  /**
+   * Role-Based Access Control (RBAC) Extraction Helper
+   * Distinguishes between Civilian ('citizen') and Administrator ('admin' | 'super_admin') accounts.
+   */
+  function extractUserRole(req: express.Request): 'admin' | 'super_admin' | 'citizen' {
+    const headerRole = req.headers['x-user-role']?.toString().toLowerCase();
+    if (headerRole === 'admin' || headerRole === 'super_admin') return headerRole;
+
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      if (token.startsWith('admin_sess_')) return 'admin';
+    }
+
+    const bodyRole = req.body?.role || req.body?.userRole;
+    if (bodyRole === 'admin' || bodyRole === 'super_admin') return bodyRole;
+
+    const queryRole = req.query?.role;
+    if (queryRole === 'admin' || queryRole === 'super_admin') return queryRole as any;
+
+    return 'citizen';
+  }
+
+  // RBAC Capabilities Endpoint: Reports active role permissions and menu configurations
+  app.get('/api/auth/rbac-capabilities', (req, res) => {
+    const userRole = extractUserRole(req);
+    const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+    res.json({
+      success: true,
+      role: userRole,
+      isAdmin,
+      visibleMenuOptions: isAdmin
+        ? [
+            'admin_portal',
+            'dashboard',
+            'citizen_dashboard',
+            'telemetry',
+            'map',
+            'alerts',
+            'sensors',
+            'metrics',
+            'reports',
+            'history',
+            'configuration',
+            'logs',
+            'user_login',
+          ]
+        : [
+            'dashboard',
+            'citizen_dashboard',
+            'telemetry',
+            'map',
+            'alerts',
+            'metrics',
+            'reports',
+            'history',
+            'user_login',
+          ],
+      hiddenMenuOptions: isAdmin
+        ? []
+        : ['admin_portal', 'sensors', 'logs', 'configuration'],
+      aiServiceProfile: isAdmin
+        ? 'Geotechnical Engineering & Emergency Dispatch Triage (Administrator Access)'
+        : 'Public Safety & Citizen Hazard Advisory (Civilian Access)',
+    });
+  });
+
   // 12. AI Fused Geotechnical Risk Prediction (Gemini 3.7 Flash + ESP32 Telemetry + Satellite Weather)
   // Enforces 4-Tier Risk Level Output (Level 0, Level 1, Level 2, Level 3)
   app.post('/api/ai/fused-predict', async (req, res) => {
@@ -1198,6 +1265,9 @@ async function startServer() {
       const targetLat = Number(lat) || 26.1445;
       const targetLng = Number(lng) || 91.7362;
       const targetSector = sanitizeString(sector, 100) || 'Guwahati Hills (Kamrup)';
+
+      const userRole = extractUserRole(req);
+      const isAdministrator = userRole === 'admin' || userRole === 'super_admin';
 
       const espPayload = {
         deviceId: sanitizeString(telemetry?.deviceId, 50) || latestDemoIngest.deviceId,
@@ -1252,19 +1322,39 @@ async function startServer() {
           timeToCritical: riskLevelNumber >= 2 ? '~3.5 Hours' : '> 24 Hours',
           confidence: 93.5,
           actionProtocol,
-          summary: `Fused data indicates ${riskTierName} status in ${targetSector}. Displacement of ${espPayload.displacement_mm}mm and pore pressure of ${espPayload.pore_pressure_kpa} kPa coupled with ${satelliteData.imd_monsoon_status}.`,
-          recommendations: [
-            riskLevelNumber === 3 ? 'Execute immediate Level 3 Evacuation plan' : 'Maintain standard vigilance',
-            'Mobilize SDRF / NDRF 1st Bn Guwahati quick response team',
-            'Issue traveler advisories for hill roads (NH-29, NH-6, NH-27)',
-            'Keep ESP32 wireless telemetry in continuous 5s burst mode',
-          ],
-          geotechnicalAnalysis: {
-            factorOfSafety: fusedData.fusionMetrics.factorOfSafety,
-            porePressureRatio: fusedData.fusionMetrics.poreHeadRatio,
-            shearStrainRate: `${(espPayload.displacement_mm * 0.4).toFixed(2)} mm/hr`,
-            hydrologicalSaturation: `${satelliteData.soil_saturation_index}% VWC`,
-          },
+          summary: isAdministrator
+            ? `Fused data indicates ${riskTierName} status in ${targetSector}. Displacement of ${espPayload.displacement_mm}mm and pore pressure of ${espPayload.pore_pressure_kpa} kPa coupled with ${satelliteData.imd_monsoon_status}. FS: ${fusedData.fusionMetrics.factorOfSafety}.`
+            : `Local ground status is ${riskTierName} in ${targetSector}. High seasonal rainfall has saturated hill slopes. Public caution is advised along hill roads.`,
+          recommendations: isAdministrator
+            ? [
+                riskLevelNumber === 3 ? 'Execute immediate Level 3 Evacuation plan' : 'Maintain standard vigilance',
+                'Mobilize SDRF / NDRF 1st Bn Guwahati quick response team',
+                'Issue traveler advisories for hill roads (NH-29, NH-6, NH-27)',
+                'Keep ESP32 wireless telemetry in continuous 5s burst mode',
+              ]
+            : [
+                'Avoid resting or walking directly below steep earthen embankments.',
+                'Keep an emergency household kit ready with essential documents and torches.',
+                'Call State Disaster Helpline 1070 or 112 immediately if ground cracks appear.',
+                'Follow traffic police advisories before traveling on mountain highways.',
+              ],
+          geotechnicalAnalysis: isAdministrator
+            ? {
+                factorOfSafety: fusedData.fusionMetrics.factorOfSafety,
+                porePressureRatio: fusedData.fusionMetrics.poreHeadRatio,
+                shearStrainRate: `${(espPayload.displacement_mm * 0.4).toFixed(2)} mm/hr`,
+                hydrologicalSaturation: `${satelliteData.soil_saturation_index}% VWC`,
+              }
+            : undefined,
+          civilianAdvisory: !isAdministrator
+            ? {
+                advisoryLevel: riskTierName,
+                publicNotice: 'Information compiled for civilian safety by the NER Landslide Early Warning System.',
+                helpline: '1070 / 112',
+              }
+            : undefined,
+          roleContext: userRole,
+          accountType: isAdministrator ? 'administrator' : 'civilian',
           telemetrySummary: fusedData.telemetry,
           satelliteSummary: {
             slope_angle_deg: satelliteData.slope_angle_deg,
@@ -1340,7 +1430,7 @@ Return a comprehensive geotechnical hazard assessment in JSON format with:
 15. cumulativeRainfallRisk: assessment of cumulative pluvial surcharge load (e.g. "High Surcharge (115.5mm in 24h) risking translational slip on 34° slope").`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -1495,7 +1585,7 @@ Assign one of the 4 graduated warning levels (Level 0: Safe, Level 1: Watch, Lev
 10. recommendations: array of 4 emergency directives`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -1613,7 +1703,7 @@ Evaluate for emergency triage:
       }
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents,
         config: {
           responseMimeType: 'application/json',
@@ -1690,7 +1780,7 @@ Return JSON:
 5. homeownerAdvice: clear signs for slope residents to monitor.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -1786,7 +1876,7 @@ For each report, provide:
 - plainEnglishAction: immediate field action recommended (one clear sentence)`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -1841,8 +1931,17 @@ For each report, provide:
     }
   });
 
-  // 16. Trigger simulated anomaly spike
+  // 16. Trigger simulated anomaly spike (RBAC Protected: Certified Administrators Only)
   app.post('/api/sensors/simulate-spike', (req, res) => {
+    const userRole = extractUserRole(req);
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      return res.status(403).json({
+        error: 'Access Denied: Sensor telemetry calibration and simulated anomaly injection are restricted to certified administrators.',
+        requiredRole: 'admin',
+        currentRole: userRole,
+      });
+    }
+
     simulatedSpikeActive = !simulatedSpikeActive;
     res.json({
       spikeActive: simulatedSpikeActive,

@@ -14,7 +14,9 @@ import {
   Smartphone,
   LogOut,
   KeyRound,
-  Users
+  Users,
+  Settings,
+  Sparkles
 } from 'lucide-react';
 import { AuthenticatedUser } from '../types';
 import { BhumiRakshakLogo } from './BhumiRakshakLogo';
@@ -42,6 +44,7 @@ interface TopNavbarProps {
   currentUser?: AuthenticatedUser | null;
   onOpenAuthModal?: (mode?: 'user' | 'admin') => void;
   onLogout?: () => void;
+  onSwitchToCivilian?: () => void;
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
@@ -65,6 +68,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   currentUser,
   onOpenAuthModal,
   onLogout,
+  onSwitchToCivilian,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -204,31 +208,44 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
         {/* Direct Portal Quick-Nav Buttons */}
         <div className="hidden md:flex items-center gap-1.5 border-l border-slate-800 pl-2">
+          {/* Designated Citizen Dashboard button - always visible */}
           <button
-            onClick={() => onSelectTab('user_login')}
+            onClick={() => onSelectTab('citizen_dashboard')}
             className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              currentTab === 'user_login'
+              currentTab === 'citizen_dashboard'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-slate-800/80 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30'
             }`}
-            title="Open Citizen & User OTP Login Section"
+            title="Open Designated Citizen Safety Dashboard"
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Citizen Portal</span>
+            <span>Citizen Dashboard</span>
           </button>
 
-          <button
-            onClick={() => onSelectTab('admin_portal')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              currentTab === 'admin_portal' || currentTab === 'users'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-slate-800/80 hover:bg-slate-800 text-blue-400 border border-blue-500/30'
-            }`}
-            title="Open Administrator Dashboard & User Audits"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Admin Console</span>
-          </button>
+          {/* Admin features: Only show Admin Console if user is authenticated as admin; otherwise show Admin Login */}
+          {isUserAdmin ? (
+            <button
+              onClick={() => onSelectTab('admin_portal')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                currentTab === 'admin_portal' || currentTab === 'users'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-800/80 hover:bg-slate-800 text-blue-400 border border-blue-500/30'
+              }`}
+              title="Open Administrator Dashboard & User Audits"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Admin Console</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onOpenAuthModal?.('admin')}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer bg-slate-800/80 hover:bg-slate-700 text-amber-300 border border-amber-500/40"
+              title="Administrator Authentication Required to access Admin features"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              <span>Admin Login</span>
+            </button>
+          )}
         </div>
 
         {/* User Profile / Admin Badge */}
@@ -247,7 +264,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                 {currentUser?.name || 'Guest / Citizen'}
               </span>
               <span className="text-[10px] text-slate-400">
-                {isUserAdmin ? 'Administrator (Full Clearance)' : 'Citizen (Normal Data Only)'}
+                {isUserAdmin ? 'Administrator (Full Clearance)' : 'Civilian (Citizen Dashboard Access)'}
               </span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden lg:block" />
@@ -262,7 +279,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
                     isUserAdmin ? 'bg-blue-900/60 text-blue-300' : 'bg-emerald-900/60 text-emerald-300'
                   }`}>
-                    {isUserAdmin ? 'HQ ADMIN' : 'CITIZEN OTP'}
+                    {isUserAdmin ? 'HQ ADMIN' : 'CIVILIAN ROLE'}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 truncate mt-0.5">{currentUser?.email || 'paulayush907@gmail.com'}</p>
@@ -272,97 +289,140 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
               </div>
 
               {/* Navigation Sections */}
-              <button
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  onSelectTab('user_login');
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-emerald-400 transition-colors flex items-center gap-2.5"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Citizen Login Section (OTP)</span>
-              </button>
+              {isUserAdmin ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onSelectTab('admin_portal');
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-blue-400 transition-colors flex items-center gap-2.5"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Admin Dashboard & User Logins</span>
+                  </button>
 
-              <button
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  onSelectTab('admin_portal');
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-blue-400 transition-colors flex items-center gap-2.5"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                <span>Admin Dashboard & User Logins</span>
-              </button>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onSelectTab('citizen_dashboard');
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-emerald-400 transition-colors flex items-center gap-2.5"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Citizen Dashboard (Public View)</span>
+                  </button>
 
-              <button
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  onOpenProfile();
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-slate-800 transition-colors flex items-center gap-2.5"
-              >
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>Officer Profile</span>
-              </button>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onOpenProfile();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-slate-800 transition-colors flex items-center gap-2.5"
+                  >
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Officer Profile</span>
+                  </button>
 
-              <button
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  onOpenSettings?.();
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-slate-800 transition-colors flex items-center gap-2.5"
-              >
-                <span>System Configuration</span>
-              </button>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onOpenSettings?.();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-slate-800 transition-colors flex items-center gap-2.5"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-slate-400" />
+                    <span>System Configuration</span>
+                  </button>
 
-              {/* Switch Account or Login */}
-              <div className="border-t border-slate-800 my-1 pt-1">
-                <button
-                  onClick={() => {
-                    setShowUserDropdown(false);
-                    onOpenAuthModal?.('user');
-                  }}
-                  className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-emerald-400 transition-colors flex items-center gap-2.5"
-                >
-                  <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Citizen Login (Phone & Email OTP)</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowUserDropdown(false);
-                    onOpenAuthModal?.('admin');
-                  }}
-                  className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-blue-400 transition-colors flex items-center gap-2.5"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Admin Login (Credentials)</span>
-                </button>
-              </div>
+                  {onSwitchToCivilian && (
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onSwitchToCivilian();
+                      }}
+                      className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-emerald-400 transition-colors flex items-center gap-2.5 border-t border-slate-800"
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Switch to Civilian View</span>
+                    </button>
+                  )}
 
-              {onRebootDiagnostics && (
-                <button
-                  onClick={() => {
-                    setShowUserDropdown(false);
-                    onRebootDiagnostics();
-                  }}
-                  className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-cyan-400 transition-colors flex items-center gap-2.5 border-t border-slate-800"
-                  title="Reload default system initialization & telemetry diagnostics screen"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Boot Diagnostics Screen</span>
-                </button>
+                  {onRebootDiagnostics && (
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onRebootDiagnostics();
+                      }}
+                      className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-cyan-400 transition-colors flex items-center gap-2.5 border-t border-slate-800"
+                      title="Reload default system initialization & telemetry diagnostics screen"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Boot Diagnostics Screen</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onOpenEmergency();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-rose-950/50 text-rose-400 transition-colors flex items-center gap-2.5 border-t border-slate-800"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Emergency Broadcast</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onSelectTab('citizen_dashboard');
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-slate-800 text-emerald-400 transition-colors flex items-center gap-2.5"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Designated Citizen Dashboard</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onSelectTab('user_login');
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-slate-800 transition-colors flex items-center gap-2.5"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Citizen OTP Account & Phone</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserDropdown(false);
+                      onOpenCitizenGuide?.();
+                    }}
+                    className="w-full px-3.5 py-2 text-left hover:bg-slate-800 transition-colors flex items-center gap-2.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Citizen Safety Guide</span>
+                  </button>
+
+                  {/* Administrative Authentication Gate */}
+                  <div className="border-t border-slate-800 my-1 pt-1">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        onOpenAuthModal?.('admin');
+                      }}
+                      className="w-full px-3.5 py-2.5 text-left bg-blue-950/40 hover:bg-blue-900/50 text-blue-300 transition-colors flex items-center gap-2.5 font-semibold"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Authenticate as Administrator</span>
+                    </button>
+                  </div>
+                </>
               )}
-
-              <button
-                onClick={() => {
-                  setShowUserDropdown(false);
-                  onOpenEmergency();
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-rose-950/50 text-rose-400 transition-colors flex items-center gap-2.5 border-t border-slate-800"
-              >
-                <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
-                <span>Emergency Broadcast</span>
-              </button>
 
               {onLogout && (
                 <button

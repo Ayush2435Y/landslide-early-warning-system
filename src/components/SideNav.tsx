@@ -12,14 +12,24 @@ import {
   Settings, 
   Terminal,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  Lock,
+  Smartphone,
+  Radio,
+  UserCheck,
+  KeyRound
 } from 'lucide-react';
+import { AuthenticatedUser } from '../types';
 
 interface SideNavProps {
   currentTab: string;
   onSelectTab: (tab: string) => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  isAdmin?: boolean;
+  currentUser?: AuthenticatedUser | null;
+  onOpenAdminLogin?: () => void;
+  onSwitchToCivilian?: () => void;
 }
 
 export const SideNav: React.FC<SideNavProps> = ({
@@ -27,20 +37,35 @@ export const SideNav: React.FC<SideNavProps> = ({
   onSelectTab,
   isOpenMobile = false,
   onCloseMobile,
+  isAdmin = false,
+  currentUser,
+  onOpenAdminLogin,
+  onSwitchToCivilian,
 }) => {
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'admin_portal', label: 'Admin Dashboard', icon: ShieldCheck },
-    { id: 'telemetry', label: 'Live Regional Area Monitoring', icon: Activity },
-    { id: 'map', label: 'Risk Map', icon: Map },
-    { id: 'alerts', label: 'Alerts', icon: AlertTriangle },
-    { id: 'sensors', label: 'Sensor Data', icon: Cpu },
-    { id: 'metrics', label: 'AI Analytics', icon: Sparkles },
-    { id: 'reports', label: 'Reports', icon: FileText },
-    { id: 'history', label: 'Historical Data', icon: History },
-    { id: 'configuration', label: 'Configuration', icon: Settings },
-    { id: 'logs', label: 'System Logs', icon: Terminal },
+  // Master navigation item list with role restrictions
+  // Restricted items hidden for citizens: Admin Dashboard, Sensor Data, System Logs, Configuration
+  // All other features and pages remain fully visible and operational for citizens and administrators alike.
+  const allNavItems = [
+    { id: 'admin_portal', label: 'Admin Dashboard', icon: ShieldCheck, restricted: true },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, restricted: false },
+    { id: 'citizen_dashboard', label: 'Citizen Dashboard', icon: Radio, restricted: false },
+    { id: 'telemetry', label: 'Live Regional Monitoring', icon: Activity, restricted: false },
+    { id: 'map', label: 'Risk Map', icon: Map, restricted: false },
+    { id: 'alerts', label: 'Alerts', icon: AlertTriangle, restricted: false },
+    { id: 'sensors', label: 'Sensor Data', icon: Cpu, restricted: true },
+    { id: 'metrics', label: 'AI Analytics', icon: Sparkles, restricted: false },
+    { id: 'reports', label: 'Reports', icon: FileText, restricted: false },
+    { id: 'history', label: 'Historical Data', icon: History, restricted: false },
+    { id: 'configuration', label: 'Configuration', icon: Settings, restricted: true },
+    { id: 'logs', label: 'System Logs', icon: Terminal, restricted: true },
+    { id: 'user_login', label: 'Citizen Account (OTP)', icon: Smartphone, restricted: false },
   ];
+
+  // When a citizen logs in, ONLY the 4 restricted options are hidden.
+  // Upon proper administrator authentication, all options become visible and accessible.
+  const navItems = isAdmin 
+    ? allNavItems 
+    : allNavItems.filter((item) => !item.restricted);
 
   return (
     <>
@@ -93,16 +118,55 @@ export const SideNav: React.FC<SideNavProps> = ({
 
             {/* Mobile Bottom Status */}
             <div className="p-3.5 border-t border-slate-800/80 bg-[#070c1d]">
-              <div className="bg-[#0f1a38] border border-slate-700/60 rounded-xl p-3 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-xs font-bold text-white">System Health</span>
+              {isAdmin ? (
+                <div className="bg-[#0f1a38] border border-slate-700/60 rounded-xl p-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-xs font-bold text-white">Administrator</span>
+                    </div>
+                    <span className="text-[9px] font-semibold bg-blue-950 text-blue-300 border border-blue-800/60 px-1.5 py-0.5 rounded">
+                      HQ Access
+                    </span>
+                  </div>
+                  {onSwitchToCivilian && (
+                    <button
+                      onClick={() => {
+                        onSwitchToCivilian();
+                        onCloseMobile?.();
+                      }}
+                      className="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Radio className="w-3 h-3 text-emerald-400" />
+                      <span>Switch to Civilian View</span>
+                    </button>
+                  )}
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-slate-300">
-                  <span>Operational</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              ) : (
+                <div className="bg-[#0f1a38] border border-slate-700/60 rounded-xl p-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-xs font-bold text-white">Civilian Mode</span>
+                    </div>
+                    <span className="text-[9px] font-semibold bg-amber-950 text-amber-300 border border-amber-800/60 px-1.5 py-0.5 rounded">
+                      Restricted
+                    </span>
+                  </div>
+                  {onOpenAdminLogin && (
+                    <button
+                      onClick={() => {
+                        onOpenAdminLogin();
+                        onCloseMobile?.();
+                      }}
+                      className="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <KeyRound className="w-3 h-3" />
+                      <span>Admin Login</span>
+                    </button>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </aside>
         </div>
@@ -134,25 +198,56 @@ export const SideNav: React.FC<SideNavProps> = ({
 
         {/* Bottom System Health Status Widget */}
         <div className="p-3.5 border-t border-slate-800/80 bg-[#070c1d]">
-          <div className="bg-[#0f1a38] border border-slate-700/60 rounded-xl p-3.5 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+          {isAdmin ? (
+            <div className="bg-[#0f1a38] border border-slate-700/60 rounded-xl p-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="text-xs font-bold text-white">Administrator</span>
+                </div>
+                <span className="text-[9px] font-semibold bg-blue-950 text-blue-300 border border-blue-800/60 px-1.5 py-0.5 rounded">
+                  Full Clearance
+                </span>
               </div>
-              <span className="text-xs font-bold text-white tracking-tight">System Health</span>
+              <p className="text-[10px] text-slate-300 leading-tight truncate">
+                {currentUser?.name || 'Dr. A. Sharma'}
+              </p>
+              {onSwitchToCivilian && (
+                <button
+                  onClick={onSwitchToCivilian}
+                  className="w-full mt-0.5 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
+                  title="Switch to civilian user view to preview citizen dashboard"
+                >
+                  <Radio className="w-3 h-3 text-emerald-400" />
+                  <span>View as Civilian</span>
+                </button>
+              )}
             </div>
-            
-            <div className="flex items-center justify-between text-[11px] text-slate-300">
-              <span className="flex items-center gap-1.5 font-medium">
-                All Systems Operational
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          ) : (
+            <div className="bg-[#0f1a38] border border-slate-700/60 rounded-xl p-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-xs font-bold text-white">Civilian Account</span>
+                </div>
+                <span className="text-[9px] font-semibold bg-amber-950 text-amber-300 border border-amber-800/60 px-1.5 py-0.5 rounded">
+                  Restricted
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Admin features (Sensors, Logs, Config, Admin Console) restricted.
+              </p>
+              {onOpenAdminLogin && (
+                <button
+                  onClick={onOpenAdminLogin}
+                  className="w-full mt-0.5 py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>Admin Login</span>
+                </button>
+              )}
             </div>
-
-            <div className="text-[10px] text-slate-400 font-mono">
-              Last Check: 2 min ago
-            </div>
-          </div>
+          )}
         </div>
       </aside>
     </>

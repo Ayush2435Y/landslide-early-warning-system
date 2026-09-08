@@ -21,6 +21,8 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { AuthModal } from './components/AuthModal';
 import { AdminUsersView } from './components/AdminUsersView';
 import { UserLoginView } from './components/UserLoginView';
+import { CitizenDashboardView } from './components/CitizenDashboardView';
+import { AdminAccessGuard } from './components/AdminAccessGuard';
 import { useOfflineTelemetry } from './utils/useOfflineTelemetry';
 import { Database, WifiOff, RefreshCw } from 'lucide-react';
 
@@ -33,15 +35,24 @@ import {
 } from './data/initialData';
 import { AlertItem, IncidentReport, PredictiveAIInsight, SensorData, FieldOfficerProfile, AuthenticatedUser } from './types';
 
-export function App() {
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
-  const [isOfficerMode, setIsOfficerMode] = useState<boolean>(false);
-  const [isAdmin, setIsAdmin] = useState<boolean>(true);
-  const [activeLayer, setActiveLayer] = useState<string>('risk_zones');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+// Default civilian user profile (Standard Public Access Role)
+const DEFAULT_CIVILIAN_USER: AuthenticatedUser = {
+  id: 'citizen-907',
+  name: 'Ayush Paul (Civilian)',
+  email: 'paulayush907@gmail.com',
+  phone: '+91 98765 43210',
+  role: 'citizen',
+  department: 'Public Civilian Access',
+  jurisdiction: 'Kamrup / Guwahati Citizen Portal',
+  isConfidentialCleared: false,
+  token: 'citizen_session_token',
+  loginTime: new Date().toISOString(),
+  isAuthenticated: true,
+};
 
-  // Authenticated User State (Loaded from localStorage or initialized with Super Admin)
-  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(() => {
+export function App() {
+  // Authenticated User State (Loaded from localStorage or initialized with civilian role)
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser>(() => {
     try {
       const saved = localStorage.getItem('lithos_auth_user');
       if (saved) {
@@ -55,20 +66,33 @@ export function App() {
     } catch (e) {
       console.warn('Failed to parse saved auth user:', e);
     }
-    return {
-      id: 'admin-super-01',
-      name: 'Dr. A. Sharma (Director)',
-      email: 'admin@gsi.gov.in',
-      phone: '+91 361 223 4567',
-      role: 'super_admin',
-      department: 'Geological Survey of India (NER Directorate)',
-      jurisdiction: 'NER Directorate & Border Monitoring',
-      isConfidentialCleared: true,
-      token: 'admin_sess_default',
-      loginTime: new Date().toISOString(),
-      isAuthenticated: true,
-    };
+    return DEFAULT_CIVILIAN_USER;
   });
+
+  // Strict RBAC: Admin privilege is strictly derived from user's authenticated role
+  const isAdmin = Boolean(
+    currentUser &&
+    currentUser.isAuthenticated &&
+    (currentUser.role === 'admin' || currentUser.role === 'super_admin')
+  );
+
+  // Default tab: Civilians start on their designated Citizen Dashboard; Admins on Admin Dashboard
+  const [currentTab, setCurrentTab] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('lithos_auth_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.role === 'admin' || parsed?.role === 'super_admin') {
+          return 'admin_portal';
+        }
+      }
+    } catch (e) {}
+    return 'citizen_dashboard';
+  });
+
+  const [isOfficerMode, setIsOfficerMode] = useState<boolean>(false);
+  const [activeLayer, setActiveLayer] = useState<string>('risk_zones');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<'user' | 'admin'>('user');
@@ -331,6 +355,40 @@ export function App() {
 
   const criticalAlertsCount = alerts.filter((a) => a.severity === 'critical' && !a.acknowledged).length;
 
+  const handleToggleAdmin = useCallback((enableAdmin: boolean) => {
+    if (enableAdmin) {
+      const adminUser: AuthenticatedUser = {
+        id: 'admin-super-01',
+        name: 'Dr. A. Sharma (Director)',
+        email: 'admin@gsi.gov.in',
+        phone: '+91 361 223 4567',
+        role: 'super_admin',
+        department: 'Geological Survey of India (NER Directorate)',
+        jurisdiction: 'NER Directorate & Border Monitoring',
+        isConfidentialCleared: true,
+        token: 'admin_sess_token',
+        loginTime: new Date().toISOString(),
+        isAuthenticated: true,
+      };
+      setCurrentUser(adminUser);
+      try {
+        localStorage.setItem('lithos_auth_user', JSON.stringify(adminUser));
+      } catch (e) {}
+      showToast('Admin clearance granted: Authenticated as Dr. Sharma (GSI Director)');
+    } else {
+      handleSwitchToCivilian();
+    }
+  }, [showToast]);
+
+  const handleSwitchToCivilian = useCallback(() => {
+    setCurrentUser(DEFAULT_CIVILIAN_USER);
+    try {
+      localStorage.setItem('lithos_auth_user', JSON.stringify(DEFAULT_CIVILIAN_USER));
+    } catch (e) {}
+    setCurrentTab('citizen_dashboard');
+    showToast('Switched to Civilian Role. Admin features are strictly restricted.');
+  }, [showToast]);
+
   const handleLoginSuccess = useCallback((user: AuthenticatedUser) => {
     const verifiedUserSession: AuthenticatedUser = {
       ...user,
@@ -338,23 +396,28 @@ export function App() {
       isAuthenticated: true,
     };
     setCurrentUser(verifiedUserSession);
-    const userIsAdmin = verifiedUserSession.role === 'admin' || verifiedUserSession.role === 'super_admin';
-    setIsAdmin(userIsAdmin);
     try {
       localStorage.setItem('lithos_auth_user', JSON.stringify(verifiedUserSession));
     } catch (e) {
       console.warn('Could not save user to localStorage:', e);
     }
-    showToast(`Authenticated as ${verifiedUserSession.name} (${verifiedUserSession.role === 'citizen' ? 'Citizen OTP Verified' : 'Administrator'})`);
+    const isNowAdmin = verifiedUserSession.role === 'admin' || verifiedUserSession.role === 'super_admin';
+    if (isNowAdmin) {
+      setCurrentTab('admin_portal');
+      showToast(`Administrator authenticated: ${verifiedUserSession.name}`);
+    } else {
+      setCurrentTab('citizen_dashboard');
+      showToast(`Citizen authenticated: ${verifiedUserSession.name}`);
+    }
   }, [showToast]);
 
   const handleLogout = useCallback(() => {
-    setCurrentUser(null);
-    setIsAdmin(false);
+    setCurrentUser(DEFAULT_CIVILIAN_USER);
     try {
-      localStorage.removeItem('lithos_auth_user');
+      localStorage.setItem('lithos_auth_user', JSON.stringify(DEFAULT_CIVILIAN_USER));
     } catch (e) {}
-    showToast('Signed out. Switched to Public Guest access.');
+    setCurrentTab('citizen_dashboard');
+    showToast('Session ended. Switched to Civilian Role.');
   }, [showToast]);
 
   return (
@@ -375,7 +438,8 @@ export function App() {
         isOfficerMode={isOfficerMode}
         onToggleOfficerMode={() => setIsOfficerMode(!isOfficerMode)}
         isAdmin={isAdmin}
-        onToggleAdmin={(val) => setIsAdmin(val)}
+        onToggleAdmin={handleToggleAdmin}
+        onSwitchToCivilian={handleSwitchToCivilian}
         onOpenCitizenGuide={() => setIsCitizenGuideOpen(true)}
         onOpenNewIncident={() => setIsNewIncidentModalOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
@@ -428,10 +492,39 @@ export function App() {
           }}
           isOpenMobile={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          isAdmin={isAdmin}
+          currentUser={currentUser}
+          onOpenAdminLogin={() => {
+            setAuthInitialMode('admin');
+            setIsAuthModalOpen(true);
+          }}
+          onSwitchToCivilian={handleSwitchToCivilian}
         />
 
         {/* Content Area */}
         <main className={`flex-1 flex flex-col min-w-0 min-h-0 ${currentTab === 'map' ? 'overflow-hidden' : 'overflow-y-auto'} bg-[#edf2f7]`}>
+          
+          {/* Designated Citizen Dashboard */}
+          {currentTab === 'citizen_dashboard' && (
+            <CitizenDashboardView
+              currentUser={currentUser}
+              alerts={alerts}
+              reports={reports}
+              onOpenNewIncident={() => setIsNewIncidentModalOpen(true)}
+              onOpenCitizenGuide={() => setIsCitizenGuideOpen(true)}
+              onOpenAuthModal={(mode) => {
+                setAuthInitialMode(mode || 'admin');
+                setIsAuthModalOpen(true);
+              }}
+              onShowToast={showToast}
+              onSwitchToAdminLogin={() => {
+                setAuthInitialMode('admin');
+                setIsAuthModalOpen(true);
+              }}
+            />
+          )}
+
+          {/* Main Dashboard (Operational for all users) */}
           {currentTab === 'dashboard' && (
             <DashboardView
               sensors={sensors}
@@ -441,8 +534,12 @@ export function App() {
               onSelectLayer={(layer) => setActiveLayer(layer)}
               onAcknowledgeAlert={handleAcknowledgeAlert}
               onSelectSensor={(sensor) => {
-                setSelectedSensor(sensor);
-                setCurrentTab('sensors');
+                if (isAdmin) {
+                  setSelectedSensor(sensor);
+                  setCurrentTab('sensors');
+                } else {
+                  showToast('Sensor data calibration and telemetry view are restricted to administrators.');
+                }
               }}
               onSelectReport={(report) => {
                 setSelectedReport(report);
@@ -456,16 +553,29 @@ export function App() {
             />
           )}
 
+          {/* Real-Time Telemetry & Regional Monitoring (Fully visible and operational) */}
           {currentTab === 'telemetry' && (
             <RealTimeAnalyticsView
               sensors={sensors}
               onNavigateToMap={() => setCurrentTab('map')}
               onNavigateToAlerts={() => setCurrentTab('alerts')}
               onSelectSensor={(sensor) => {
-                setSelectedSensor(sensor);
-                setCurrentTab('sensors');
+                if (isAdmin) {
+                  setSelectedSensor(sensor);
+                  setCurrentTab('sensors');
+                } else {
+                  showToast('Sensor data calibration is restricted to administrators.');
+                }
               }}
-              onSimulateSpike={handleToggleSimulatedSpike}
+              onSimulateSpike={() => {
+                if (isAdmin) {
+                  handleToggleSimulatedSpike();
+                } else {
+                  showToast('Simulating sensor anomaly spikes requires administrator authentication.');
+                  setAuthInitialMode('admin');
+                  setIsAuthModalOpen(true);
+                }
+              }}
               isSpikeActive={spikeActive}
               onTriggerAlertNotification={(triggered) => {
                 showToast(`ALERT: [${triggered.ruleName}] ${triggered.message}`);
@@ -481,8 +591,12 @@ export function App() {
                 activeLayer={activeLayer}
                 onSelectLayer={(layer) => setActiveLayer(layer)}
                 onSelectSensor={(sensor) => {
-                  setSelectedSensor(sensor);
-                  setCurrentTab('sensors');
+                  if (isAdmin) {
+                    setSelectedSensor(sensor);
+                    setCurrentTab('sensors');
+                  } else {
+                    showToast('Direct sensor telemetry view requires administrative clearance.');
+                  }
                 }}
                 onSelectReport={(report) => {
                   setSelectedReport(report);
@@ -501,17 +615,31 @@ export function App() {
             />
           )}
 
+          {/* Sensor Data (Restricted from civilians) */}
           {currentTab === 'sensors' && (
-            <SensorsView
-              sensors={sensors}
-              onSelectSensor={setSelectedSensor}
-              onExportSensors={handleExportData}
-              onSimulateSpike={handleToggleSimulatedSpike}
-              isSpikeActive={spikeActive}
-              onOpenVisualizer={() => setCurrentTab('telemetry')}
-              isAdmin={isAdmin}
-              onToggleAdmin={(val) => setIsAdmin(val)}
-            />
+            isAdmin ? (
+              <SensorsView
+                sensors={sensors}
+                onSelectSensor={setSelectedSensor}
+                onExportSensors={handleExportData}
+                onSimulateSpike={handleToggleSimulatedSpike}
+                isSpikeActive={spikeActive}
+                onOpenVisualizer={() => setCurrentTab('telemetry')}
+                isAdmin={isAdmin}
+                onToggleAdmin={handleToggleAdmin}
+              />
+            ) : (
+              <AdminAccessGuard
+                featureName="Sensor Data"
+                featureDescription="Raw borehole piezometer telemetry, subsurface shear inclinometers, and calibration spike controls are strictly restricted from the civilian user role."
+                onAuthenticateSuccess={(admin) => {
+                  handleLoginSuccess(admin);
+                  setCurrentTab('sensors');
+                }}
+                onReturnToCitizenDashboard={() => setCurrentTab('citizen_dashboard')}
+                onShowToast={showToast}
+              />
+            )
           )}
 
           {currentTab === 'metrics' && (
@@ -533,7 +661,7 @@ export function App() {
               onAddNote={handleAddNote}
               onOpenInGIS={(report) => {
                 setSelectedReport(report);
-                setCurrentTab('dashboard');
+                setCurrentTab(isAdmin ? 'dashboard' : 'citizen_dashboard');
               }}
               onOpenNewIncident={() => setIsNewIncidentModalOpen(true)}
             />
@@ -553,20 +681,82 @@ export function App() {
             />
           )}
 
+          {/* Admin Dashboard / Users Portal (Restricted from civilians) */}
           {(currentTab === 'users' || currentTab === 'admin_portal') && (
-            <AdminUsersView
-              currentUser={currentUser}
-              onLoginSuccess={handleLoginSuccess}
-              onOpenAuthModal={(mode) => {
-                setAuthInitialMode(mode || 'user');
-                setIsAuthModalOpen(true);
-              }}
-              onShowToast={showToast}
-            />
+            isAdmin ? (
+              <AdminUsersView
+                currentUser={currentUser}
+                onLoginSuccess={handleLoginSuccess}
+                onOpenAuthModal={(mode) => {
+                  setAuthInitialMode(mode || 'user');
+                  setIsAuthModalOpen(true);
+                }}
+                onShowToast={showToast}
+              />
+            ) : (
+              <AdminAccessGuard
+                featureName="Admin Dashboard"
+                featureDescription="Administrative user oversight, role authorizations, access tokens, and agency dispatch logs are strictly restricted from the civilian user role."
+                onAuthenticateSuccess={(admin) => {
+                  handleLoginSuccess(admin);
+                  setCurrentTab('admin_portal');
+                }}
+                onReturnToCitizenDashboard={() => setCurrentTab('citizen_dashboard')}
+                onShowToast={showToast}
+              />
+            )
           )}
 
+          {/* System Logs (Restricted from civilians) */}
           {currentTab === 'logs' && (
-            <SystemLogsView />
+            isAdmin ? (
+              <SystemLogsView />
+            ) : (
+              <AdminAccessGuard
+                featureName="System Logs"
+                featureDescription="Raw sensor packet streams, edge gateway daemon kernels, and administrative audit trails are strictly restricted from the civilian user role."
+                onAuthenticateSuccess={(admin) => {
+                  handleLoginSuccess(admin);
+                  setCurrentTab('logs');
+                }}
+                onReturnToCitizenDashboard={() => setCurrentTab('citizen_dashboard')}
+                onShowToast={showToast}
+              />
+            )
+          )}
+
+          {/* Configuration Tools (Restricted from civilians) */}
+          {currentTab === 'configuration' && (
+            isAdmin ? (
+              <div className="p-8 text-center flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-900 mx-auto">
+                  <Database className="w-8 h-8" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">System & GIS Configuration</h2>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                    Spatial projections, sensor polling intervals, alert thresholds, and offline storage.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsSettingsModalOpen(true)}
+                  className="px-5 py-2.5 bg-[#131b2e] hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  Launch Configuration Window
+                </button>
+              </div>
+            ) : (
+              <AdminAccessGuard
+                featureName="Configuration Tools"
+                featureDescription="GIS datum configuration, polling intervals, edge data cache rules, and sensor alert thresholds are strictly restricted from the civilian user role."
+                onAuthenticateSuccess={(admin) => {
+                  handleLoginSuccess(admin);
+                  setIsSettingsModalOpen(true);
+                }}
+                onReturnToCitizenDashboard={() => setCurrentTab('citizen_dashboard')}
+                onShowToast={showToast}
+              />
+            )
           )}
         </main>
       </div>
@@ -607,7 +797,8 @@ export function App() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         isAdmin={isAdmin}
-        onToggleAdmin={(val) => setIsAdmin(val)}
+        onToggleAdmin={handleToggleAdmin}
+        onAdminAuthenticated={handleLoginSuccess}
         cacheStats={cacheStats}
         lastCachedAt={lastCachedAt}
         isSimulatedOffline={isSimulatedOffline}

@@ -390,6 +390,7 @@ export interface AuthenticatedUser {
   phone?: string;
   role: 'admin' | 'super_admin' | 'user' | 'citizen' | 'field_officer';
   department?: string;
+  jurisdiction?: string;
   token?: string;
   loginTime: string;
   avatarUrl?: string;

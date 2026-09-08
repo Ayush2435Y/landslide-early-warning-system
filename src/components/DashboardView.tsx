@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { AlertItem, SensorData, IncidentReport } from '../types';
 import { DashboardRiskMap, NER_MAP_STATIONS } from './DashboardRiskMap';
+import { AIRiskAssessmentSection } from './AIRiskAssessmentSection';
 
 interface DashboardViewProps {
   sensors: SensorData[];
@@ -751,127 +752,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* ROW 3: AI RISK ASSESSMENT (LEFT) & RECENT ALERTS (RIGHT)                  */}
+      {/* ROW 3: AI RISK ASSESSMENT (LEFT, 6 COLS) & RECENT ALERTS (RIGHT, 6 COLS)   */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* LEFT COLUMN: AI Risk Assessment Card (6 cols) */}
-        <div className="lg:col-span-6 bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
-          {/* Card Header (Dark Navy) */}
-          <div className="bg-[#0a1128] text-white px-4 py-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white tracking-wide">AI Risk Assessment</h2>
-            <div className="flex items-center gap-1.5 bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live</span>
-            </div>
-          </div>
-
-          {/* Card Body: 2 Sub-panels (Overall Risk Level & Risk Factors Contribution) */}
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-            {/* Left Sub-panel: Overall Risk Level */}
-            <div className="flex flex-col justify-between border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-4">
-              <div>
-                <p className="text-xs font-bold text-slate-700 mb-2.5">Overall Risk Level</p>
-                
-                {/* Big Red Critical Banner */}
-                <div className="bg-[#d63031] text-white rounded-lg p-3.5 text-center shadow-xs mb-4">
-                  <p className="text-xl font-black tracking-wider uppercase">CRITICAL</p>
-                  <p className="text-xs font-normal text-white/95 mt-0.5">Landslide probability is very high</p>
-                </div>
-
-                {/* Metric Summary Rows */}
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Risk Score</span>
-                    <span className="font-bold text-slate-900 font-mono">0.87 / 1.00</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Confidence</span>
-                    <span className="font-bold text-slate-900 font-mono">92.3%</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-slate-500 font-medium">Last Updated</span>
-                    <span className="font-medium text-slate-600 font-mono">2 min ago</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Sub-panel: Risk Factors Contribution */}
-            <div className="flex flex-col justify-between">
-              <div>
-                <p className="text-xs font-bold text-slate-700 mb-2">Risk Factors Contribution</p>
-                
-                <div className="flex items-center gap-4">
-                  {/* Circular Donut Chart */}
-                  <div className="relative w-28 h-28 shrink-0">
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                      {/* Background Ring */}
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="4.5" />
-                      {/* Rainfall: 30% -> Blue */}
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#3b82f6" strokeWidth="4.5" strokeDasharray="26.4 100" strokeDashoffset="0" />
-                      {/* Pore Pressure: 30% -> Orange */}
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="4.5" strokeDasharray="26.4 100" strokeDashoffset="-26.4" />
-                      {/* Displacement: 25% -> Purple */}
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#8b5cf6" strokeWidth="4.5" strokeDasharray="22 100" strokeDashoffset="-52.8" />
-                      {/* Terrain: 10% -> Teal */}
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4.5" strokeDasharray="8.8 100" strokeDashoffset="-74.8" />
-                      {/* Other: 5% -> Gray */}
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#94a3b8" strokeWidth="4.5" strokeDasharray="4.4 100" strokeDashoffset="-83.6" />
-                    </svg>
-                    {/* Donut Center Text */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                      <span className="text-base font-bold text-slate-900 font-mono leading-none">0.87</span>
-                      <span className="text-[9px] text-slate-400 font-medium">Risk Score</span>
-                    </div>
-                  </div>
-
-                  {/* Factor Breakdown Legend with Values */}
-                  <div className="space-y-1 text-[11px] flex-1">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#3b82f6]" />
-                        <span className="text-slate-600">Rainfall (30%)</span>
-                      </div>
-                      <span className="font-mono font-semibold text-slate-800">0.28</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
-                        <span className="text-slate-600">Pore Pressure (30%)</span>
-                      </div>
-                      <span className="font-mono font-semibold text-slate-800">0.26</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
-                        <span className="text-slate-600">Displacement (25%)</span>
-                      </div>
-                      <span className="font-mono font-semibold text-slate-800">0.22</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#10b981]" />
-                        <span className="text-slate-600">Terrain (10%)</span>
-                      </div>
-                      <span className="font-mono font-semibold text-slate-800">0.08</span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-[#94a3b8]" />
-                        <span className="text-slate-600">Other Factors (5%)</span>
-                      </div>
-                      <span className="font-mono font-semibold text-slate-800">0.03</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AIRiskAssessmentSection 
+          sensors={sensors}
+          className="lg:col-span-6"
+          onSelectScanner={(site) => {
+            if (onSelectSensor) {
+              const matched = sensors.find(s => s.id === site.stationCode || s.name.toLowerCase().includes(site.area.toLowerCase()));
+              if (matched) onSelectSensor(matched);
+            }
+          }}
+        />
 
         {/* RIGHT COLUMN: Recent Alerts Card (6 cols) */}
         <div className="lg:col-span-6 bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
